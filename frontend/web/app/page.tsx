@@ -1,3 +1,4 @@
+// app/page.tsx
 import Button from "@/components/Button";
 
 export default function Home() {

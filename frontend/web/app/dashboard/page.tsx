@@ -10,18 +10,18 @@ export default function DashboardPage() {
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login')
-    }
-  }, [loading, user, router])
+  if (!loading && user === null) {
+    router.replace('/login')
+  }
+}, [loading, user])
 
-  if (loading) return <p>Loading...</p>
-  if (!user) return  <p>Not logged in</p>
+
+if (loading) return null
 
   return (
     <main>
       <h1>Dashboard</h1>
-      <p>Email: {user.email}</p>
+      <p>Email: {user!.email}</p>
       <p>FullName: {profile?.full_name}</p>
       <p>Role: {role}</p>
       <button onClick={logout}>Logout</button>

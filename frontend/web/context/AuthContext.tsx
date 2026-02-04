@@ -39,7 +39,10 @@ export const AuthProvider = ({
 
   useEffect(() => {
     const loadSession = async () => {
-      const { data } = await supabase.auth.getSession()
+      const { data, error } = await supabase.auth.getSession()
+
+console.log('SESSION LOAD', data.session, error)
+
       const session = data.session
 
       setSession(session)
