@@ -108,7 +108,7 @@ this id dependency injection trade-off workth naming explicitly: injecting users
 ## refresh token rotation and logout.
 - both use the get_by_hash() and revoke() methods already sitting in RefreshTokenRepository, unused until now.
 
-- <CONCEPT> why rotation, why not just reuse?
+<CONCEPT> why rotation, why not just reuse?
 - everytime a refres token is used, the server issues a new refresh token, and immediately revoke the last one, in this way if a attacker get the old refresh token and he tries to login with that old refresh token, then server will know that someone is using older refresh token, in response server will revoke all the refresh token for that user, forcing a fresh login everywhere, treating it as a likely compromise.
 
 - WHAT WE GONNA DO?

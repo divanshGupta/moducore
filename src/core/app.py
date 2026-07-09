@@ -1,8 +1,15 @@
 from fastapi import FastAPI
 
 from src.core.config.settings import get_settings
+
+# ROUTES
 from src.modules.user.controller import router as user_router
 from src.modules.user.controller import auth_router as auth_router
+from src.apps.hospital.medicine.category_controller import router as category_router
+from src.apps.hospital.supplier.supplier_controller import router as supplier_router
+from src.apps.hospital.medicine.medicine_controller import router as medicine_router
+from src.apps.hospital.medicine.stock_controller import router as stock_router
+
 from src.core.database import model_registry  # noqa: F401
 
 def create_app() -> FastAPI:
@@ -25,6 +32,11 @@ def create_app() -> FastAPI:
 
     app.include_router(user_router)
     app.include_router(auth_router)
+
+    app.include_router(category_router)
+    app.include_router(supplier_router)
+    app.include_router(medicine_router)
+    app.include_router(stock_router)
     
     @app.get("/health", tags=["system"])
     def health_check() -> dict:

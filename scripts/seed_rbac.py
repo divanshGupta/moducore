@@ -15,15 +15,33 @@ PERMISSIONS = [
     ("medicine.create", "Create new medicine records"),
     ("medicine.update", "Update existing medicine records"),
     ("medicine.delete", "Delete medicine records"),
+    ("category.read", "View medicine category records"),
+    ("category.create", "Create new medicine category records"),
+    ("category.update", "Update existing medicine category records"),
+    ("category.delete", "Delete medicine category records"),
+    ("supplier.read", "View supplier records"),
+    ("supplier.create", "Create new supplier records"),
+    ("supplier.update", "Update existing supplier records"),
+    ("supplier.delete", "Delete supplier records"),
     ("user.read", "View user accounts"),
     ("user.manage", "Create, update, deactivate user accounts"),
+    ("stock.read", "View stock records"),
+    ("stock.create", "Create new stock batches"),
+    ("stock.adjust", "Adjust stock quantity (dispense, receive, correct)"),
+    ("stock.update", "Update batch number or expiry date"),
+    ("stock.delete", "Delete stock records"),
 ]
 
 # Roles and which permissions each one grants.
 ROLES = {
     "Admin": [name for name, _ in PERMISSIONS],  # Admin gets everything
-    "Pharmacist": ["medicine.read", "medicine.create", "medicine.update"],
-    "Viewer": ["medicine.read"],
+    "Pharmacist": [
+        "medicine.read", "medicine.create", "medicine.update",
+        "category.read",
+        "supplier.read",
+        "stock.read", "stock.create", "stock.adjust",
+    ],
+    "Viewer": ["medicine.read", "category.read", "supplier.read", "stock.read"],
 }
 
 
@@ -51,7 +69,8 @@ async def main():
         for role_name, permission_names in ROLES.items():
             existing_role = await role_repo.get_by_name(role_name)
             if existing_role:
-                print(f"Role already exists: {role_name}")
+                existing_role.permissions = [permission_objects[name] for name in permission_names]
+                print(f"Updated role: {role_name} with {len(permission_names)} permissions")
                 continue
 
             role = Role(name=role_name)
@@ -59,7 +78,8 @@ async def main():
             await role_repo.create(role)
             print(f"Created role: {role_name} with {len(permission_names)} permissions")
 
-        await session.commit()
+        await session.commit()  # <-- this line was missing
+        print("Seed complete.")
 
 
 if __name__ == "__main__":

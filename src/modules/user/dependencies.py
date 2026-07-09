@@ -62,3 +62,30 @@ async def get_current_user(
         )
 
     return user
+
+def require_permission(permission: str):
+    """
+    Returns a FastAPI dependency that checks whether the current user
+    has the given permission (e.g. "medicine.create").
+
+    Usage in a route:
+        @router.post("/medicines", dependencies=[Depends(require_permission("medicine.create"))])
+    """
+    async def _check_permission(
+        current_user: Annotated[User, Depends(get_current_user)],
+    ) -> User:
+        user_permissions = {
+            perm.name
+            for role in current_user.roles
+            for perm in role.permissions
+        }
+
+        if permission not in user_permissions:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Missing required permission: {permission}",
+            )
+
+        return current_user
+
+    return _check_permission

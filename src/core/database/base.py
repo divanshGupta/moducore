@@ -17,6 +17,7 @@ NAMING_CONVENTION = {
 class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
+
 class PlatformBase(Base):
     """
     Base for all models in the `platform` schema — identity and
@@ -26,3 +27,14 @@ class PlatformBase(Base):
     """
     __abstract__ = True
     __table_args__ = {"schema": "platform"}
+
+
+class HospitalBase(Base):
+    """
+    Base class for all Hospital app models (apps/hospital/*).
+    Tables under this base live in the `hospital` schema — kept
+    separate from `platform` (identity/access-control) per moducore.md's
+    schema-separation rule: business domains never share a schema.
+    """
+    __abstract__ = True
+    __table_args__ = {"schema": "hospital"}

@@ -1,3 +1,5 @@
+# src/modules/role/model.py
+
 import uuid
 from datetime import datetime
 
@@ -17,16 +19,16 @@ if TYPE_CHECKING:
 role_permissions = Table(
     "role_permissions",
     PlatformBase.metadata,
-    Column("role_id", ForeignKey("platform.roles.id"), primary_key=True),
-    Column("permission_id", ForeignKey("platform.permissions.id"), primary_key=True),
+    Column("role_id", ForeignKey("platform.roles.id", ondelete="CASCADE"), primary_key=True),
+    Column("permission_id", ForeignKey("platform.permissions.id", ondelete="CASCADE"), primary_key=True),
     schema="platform",
 )
 
 user_roles = Table(
     "user_roles",
     PlatformBase.metadata,
-    Column("user_id", ForeignKey("platform.users.id"), primary_key=True),
-    Column("role_id", ForeignKey("platform.roles.id"), primary_key=True),
+    Column("user_id", ForeignKey("platform.users.id", ondelete="CASCADE"), primary_key=True),
+    Column("role_id", ForeignKey("platform.roles.id", ondelete="CASCADE"), primary_key=True),
     schema="platform",
 )
 

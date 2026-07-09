@@ -1,3 +1,5 @@
+# src/modules/permission/model.py
+
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING

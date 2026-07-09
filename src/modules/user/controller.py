@@ -12,7 +12,7 @@ from src.modules.user.service import (
 from src.modules.user.model import User
 
 from src.modules.user.auth_service import AuthService, ReusedRefreshTokenError, InvalidRefreshTokenError
-from src.modules.user.dependencies import get_auth_service, get_current_user
+from src.modules.user.dependencies import get_auth_service, get_current_user, require_permission
 from src.modules.user.schemas import LoginRequest, TokenResponse, RefreshRequest, LogoutRequest
 from src.modules.user.service import InvalidCredentialsError
 
@@ -58,6 +58,12 @@ async def login(
 @router.get("/me", response_model=UserRead)
 async def get_me(current_user: Annotated[User, Depends(get_current_user)]) -> UserRead:
     return UserRead.model_validate(current_user)
+
+@router.get("/admin-only-test")
+async def admin_only_test(
+    current_user: Annotated[User, Depends(require_permission("user.manage"))],
+):
+    return {"message": f"Hello {current_user.username}, you have user.manage"}
 
 @auth_router.post("/refresh", response_model=TokenResponse)
 async def refresh(

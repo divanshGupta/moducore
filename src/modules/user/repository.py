@@ -5,6 +5,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.modules.user.model import User
+from src.modules.role.model import Role
 
 
 class UserRepository:
@@ -18,8 +19,16 @@ class UserRepository:
 
     async def get_by_id(self, user_id: uuid.UUID) -> User | None:
         result = await self.session.execute(
-            select(User).options(selectinload(User.roles)).where(User.id == user_id)
+            select(User)
+            .options(selectinload(User.roles).selectinload(Role.permissions))
+            .where(User.id == user_id)
         )
+        """
+        The chained .selectinload(User.roles).selectinload(Role.permissions) 
+        is what eager-loads two levels deep — roles, and each role's permissions — 
+        in one efficient query, rather than N+1 lazy loads 
+        (which would fail outright in async SQLAlchemy anyway, rather than just being slow).
+        """
         return result.scalar_one_or_none()
 
     async def get_by_email(self, email: str) -> User | None:
