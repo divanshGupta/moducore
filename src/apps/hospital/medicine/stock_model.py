@@ -12,8 +12,9 @@ if TYPE_CHECKING:
 
 class Stock(HospitalBase):
     __tablename__ = "stocks"
+    #  SQLAlchemy supports combining constraints and schema in one __table_args__ by making the last tuple element the kwargs dict
     __table_args__ = (
-        CheckConstraint("quantity >= 0", name="ck_stocks_quantity_non_negative"),
+        CheckConstraint("quantity >= 0", name="quantity_non_negative"), {"schema": "hospital"}
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)

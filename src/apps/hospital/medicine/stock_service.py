@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.apps.hospital.medicine.stock_model import Stock
 from src.apps.hospital.medicine.stock_repository import StockRepository
-from src.apps.hospital.medicine.repository import MedicineRepository
+from src.apps.hospital.medicine.medicine_repository import MedicineRepository
 
 logger = logging.getLogger(__name__)
 

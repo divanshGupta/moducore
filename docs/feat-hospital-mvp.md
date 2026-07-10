@@ -44,4 +44,4 @@ ON DELETE RESTRICT confirmed to surface as a clean 409, with the underlying Pend
 ## Bug
 touching an ORM object's attributes after a failed flush — is genuinely the kind of thing worth writing down somewhere for your own reference, the same way you've been tracking the get_db rollback trap and the MissingGreenlet one. All three are variations on one theme: async SQLAlchemy fails loudly and specifically the moment you do anything with a session or object that's in a state it doesn't expect (unflushed relationship, failed transaction, wrong greenlet context). That's a real pattern worth internalizing for the modules still ahead.
 
-# Stocks and Purchase
+# Stocks - done - 10=07-26
