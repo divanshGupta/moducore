@@ -32,6 +32,7 @@ PERMISSIONS = [
     ("stock.delete", "Delete stock records"),
     ("purchase.read", "View purchase records"),
     ("purchase.create", "Create new purchase records (also creates stock)"),
+    ("dashboard.read", "Can view content of dashboard")
 ]
 
 # Roles and which permissions each one grants.

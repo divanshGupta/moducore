@@ -1,0 +1,7 @@
+# Dashboard
+
+## What counts as "Out of Stock"?
+
+- This interacts directly with the zero-quantity-rows-preserved decision. SUM(quantity) = 0 catches depleted medicines but misses a never-stocked one (SUM over zero rows is NULL, not 0). "No stock rows at all" catches the reverse case but misses depleted ones. Realistically we want both on the widget — that's one query either way: LEFT JOIN stocks ... GROUP BY medicine.id HAVING COALESCE(SUM(quantity), 0) = 0. We would default to that union unless we want "never stocked" and "depleted" as separate widgets later.
+
+- Quick defaults (easy to revisit, not architecturally binding): global constant for Low Stock threshold for now — a per-medicine reorder_level is the more correct long-term answer but it's a real Medicine migration, and Week 3's goal is "usable for demonstrations," not full correctness yet. Expiring Soon as a query param defaulting to 30 days, so it's tunable without a redeploy. And a dedicated dashboard.read permission rather than AND-ing medicine.read + stock.read + purchase.read — dashboard's really its own resource conceptually. Flag any of these if they're wrong for your demo; they don't need the same depth as the three above.

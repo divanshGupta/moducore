@@ -1,6 +1,9 @@
 import uuid
 
-from sqlalchemy import select
+from datetime import date
+from decimal import Decimal
+
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.apps.hospital.purchase.purchase_model import Purchase
@@ -54,3 +57,13 @@ class PurchaseRepository:
         # that attribute to be reloaded from the DB.
         await self.session.refresh(purchase, attribute_names=["stock"])
         return purchase
+    
+    # new method for dashboard
+    async def get_summary_for_date(self, target_date: date) -> tuple[int, Decimal]:
+        result = await self.session.execute(
+            select(
+                func.count(Purchase.id),
+                func.coalesce(func.sum(Purchase.quantity * Purchase.unit_price), 0),
+            ).where(Purchase.purchase_date == target_date)
+        )
+        return result.one()  # (count, total_value)

@@ -89,3 +89,7 @@ class PurchaseService:
 
     async def list_by_medicine(self, medicine_id: uuid.UUID) -> list[Purchase]:
         return await self.repository.list_by_medicine(medicine_id)
+    
+    # new method for dashboard
+    async def get_today_summary(self) -> tuple[int, Decimal]:
+        return await self.repository.get_summary_for_date(date.today())

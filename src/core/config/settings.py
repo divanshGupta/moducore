@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     jwt_access_token_expire_minutes: int = 15
     jwt_refresh_token_expire_days: int = 7
 
+    low_stock_threshold: int = 10
+    expiring_soon_days: int = 30
+
 
 @lru_cache
 def get_settings() -> Settings:
