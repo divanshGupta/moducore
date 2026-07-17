@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     expiring_soon_days: int = 30
 
 
-@lru_cache
+@lru_cache # (cache) whatever Settings() gets built the very first time is now stuck in memory for the rest of the program
 def get_settings() -> Settings:
     """
     Cached settings instance.

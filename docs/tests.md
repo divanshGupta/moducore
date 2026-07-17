@@ -62,3 +62,155 @@
 3. create db using SQL: CREATE DATABASE backend_platform_test;
 4. check with : \1
 
+# how do we convice get_settings() to load .env.test sometimes?
+
+- our get_settings():
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+- This always builds Settings() the same way, and Settings always loads from .env — that's hardcoded in model_config. 
+Nothing today tells it "hey, sometimes load .env.test instead."
+
+- we need to make app load .env.test when we are running tests, without changing how it behaves normally.
+
+1. set a real environment variable before the tests start, that overrides .env
+
+- pydantic-settings has a rule: if a real environment variable already exists (like DATABASE_URL set directly in the terminal or process), 
+it wins over whatever's written inside the .env file. So in conftest.py, right at the very top — before app code is even imported — 
+we can load .env.test's values in as real environment variables.
+Settings class doesn't need to change at all; it just sees DATABASE_URL "already set" and uses that
+
+2. change Settings itself to know about a "testing mode"
+
+- Add something like a TESTING flag, and inside the Settings class, 
+conditionally point at .env.test instead of .env when that flag is on.
+
+- i am choosing 1 - it keeps Settings completely untouched - app code has zero awareness that tests even exist. 
+all the test specific logic stays inside conftest.py
+
+# how conftest.py gets those values loaded as real environment variables before our app code even runs?
+
+- There's a small library, python-dotenv, that pytest projects commonly use for exactly this — 
+it reads a .env-style file and pushes each line into the actual process environment (the same place os.environ lives). 
+Once that's done, when our Settings class asks pydantic-settings to build itself, 
+it'll find DATABASE_URL already sitting in the real environment — 
+and real environment variables take priority over whatever's written in .env.
+
+- common first-time mistake - this has to happen before anything imports our app's settings or database code. 
+If src.core.database.session gets imported first — and remember, that file runs get_settings() immediately at the top, 
+outside any function — it'll cache the wrong database URL before we ever get a chance to override it.
+
+# so order of operations inside conftest.py has to be strict:
+
+1. load .env.test into the real environment (using python-dotenv)
+2. only after that - import anything from src.core...(settings, sessions, your app, anything)
+
+- we have to make sure that we installed the python-dotenv - uv add python-dotenv --dev (because it's only needed in devlopment)
+
+# creating conftest.py
+
+<step-1> loading .env.test before anything else:
+
+from dotenv import load_dotenv
+load_dotenv(".env.test", override=True)
+
+- two things worth pointing out:
+
+1. load_dotenv(".env.test", override=True) - telling Python to read the test config file and 
+put those values into the environment that our code uses. 
+python-dotenv does this by loading key-value pairs from a .env file into os.environ for the current process.
+
+2. The important part is override=True. Without it, if a variable like DATABASE_URL is already set somewhere else, 
+Python will keep that old value and ignore the one from .env.test. 
+That can cause confusing pytest failures because our tests may accidentally talk to the wrong database.
+
+<step-2>  creating the test database engine (session-scoped, runs once)
+
+import pytest_asyncio
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from src.core.config.settings import get_settings
+@pytest_asyncio.fixture(scope="session")
+async def db_engine():
+    settings = get_settings()
+    engine = create_async_engine(settings.database_url)
+    yield engine
+    await engine.dispose()
+
+- few things worth pointing out here:
+
+1. pytest_asyncio.fixture instead of plain @pytest.fixture — 
+because this function is async def. Plain pytest fixtures don't know how to run async code; 
+this decorator is what tells pytest "this one needs an event loop to run."
+2. scope="session" — this is the "once per whole run" scope
+3. The yield in the middle — this is the same pattern as our own get_db() function. 
+Code before yield runs as setup; code after yield runs as teardown, once all tests are done. 
+Here, engine.dispose() cleanly closes all the database connections when the whole test run finishes.
+4. get_settings() is called inside the fixture function, not at import time — 
+this is deliberate, so it only runs after .env.test has already been loaded in Step 1.
+
+<step-3> creating tables in the empty db - alembic migrations
+
+- two options for creating tables using alembic migrations
+
+1. have conftest.py literally run that same command as a subprocess, like a script would
+2. call Alembic's own Python API directly inside the fixture, so it runs "in process" without spawning a separate command
+
+- Option 2 stays inside the same Python process that already has .env.test loaded — 
+so there's no risk of it "forgetting" which database it's supposed to point at.
+
+- Here's roughly how that looks, added into db_engine:
+
+import asyncio
+from alembic import command
+from alembic.config import Config
+@pytest_asyncio.fixture(scope="session")
+async def db_engine():
+    settings = get_settings()
+    engine = create_async_engine(settings.database_url)
+    alembic_cfg = Config("alembic.ini")
+    await asyncio.to_thread(command.upgrade, alembic_cfg, "head")
+    yield engine
+    await engine.dispose()
+
+<step-4> db_session, the function-scoped fixture - gives each individual test a clean, ready-to-use session, then truncates the tables afterward.
+
+- Here's the shape:
+
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+@pytest_asyncio.fixture(scope="function")
+async def db_session(db_engine):
+    session_factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
+    
+    async with session_factory() as session:
+        yield session
+    
+    async with db_engine.begin() as conn:
+        result = await conn.execute(text("""
+            SELECT table_schema, table_name
+            FROM information_schema.tables
+            WHERE table_schema IN ('platform', 'hospital')
+            AND table_name != 'alembic_version'
+        """))
+        tables = [f"{schema}.{name}" for schema, name in result.fetchall()]
+        
+        if tables:
+            await conn.execute(text(f"TRUNCATE TABLE {', '.join(tables)} RESTART IDENTITY CASCADE"))
+
+- why does this fixture take db_engine as parameter?
+
+-  This is that "fixtures depending on other fixtures" idea from earlier — 
+pytest sees db_session asking for db_engine by name, runs db_engine first (only once, since it's session-scoped), 
+and hands the result in. db_session needs the engine to build sessions from.
+
+- Why truncate after the test, not before?
+
+- Either order technically works for the very first test. But doing it after means the database is always left clean and ready, no matter how a previous test failed or crashed halfway through — the cleanup doesn't depend on the next test remembering to do it first.
+
+- Why RESTART IDENTITY CASCADE specifically?
+
+1. RESTART IDENTITY resets auto-incrementing ID counters back to 1 (matters for audit_logs, since that's your one BigInteger auto-increment table)
+2. CASCADE — this is important. Since your tables have foreign keys pointing at each other (Stock → Medicine → Category, for example), Postgres would normally refuse to truncate a table that something else still references. CASCADE tells it to truncate all the dependent tables together, safely, in one shot — instead of us having to figure out the exact right order by hand
+
