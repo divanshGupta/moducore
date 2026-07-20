@@ -12,3 +12,17 @@ async def test_create_category(client):
     assert response.status_code == 201
     data = response.json()
     assert data["name"] == category.name
+
+
+async def test_create_duplicate_category(client, db_session):
+    existing_category = CategoryFactory.build()
+
+    db_session.add(existing_category)
+    await db_session.commit()
+
+    response = await client.post("/categories", json={
+        "name": existing_category.name,
+        "description": "some other description",
+    })
+
+    assert response.status_code == 409

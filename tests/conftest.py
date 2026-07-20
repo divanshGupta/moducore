@@ -54,12 +54,33 @@ async def db_session(db_engine):
         if tables:
             await conn.execute(text(f"TRUNCATE TABLE {', '.join(tables)} RESTART IDENTITY CASCADE"))
 
+# @pytest_asyncio.fixture(scope="function")
+# async def client(db_session, current_user_permissions):
+#     test_app = create_app()
+
+#     async def override_get_db():
+#         yield db_session
+
+#     async def override_get_current_user():
+#         return FakeUser(current_user_permissions)
+
+#     test_app.dependency_overrides[get_db] = override_get_db
+#     test_app.dependency_overrides[get_current_user] = override_get_current_user
+
+#     transport = ASGITransport(app=test_app)
+#     async with AsyncClient(transport=transport, base_url="http://test") as ac:
+#         yield ac
+
+#     test_app.dependency_overrides.clear()
+
 @pytest_asyncio.fixture(scope="function")
-async def client(db_session, current_user_permissions):
+async def client(db_engine, db_session, current_user_permissions):
     test_app = create_app()
+    session_factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
 
     async def override_get_db():
-        yield db_session
+        async with session_factory() as session:
+            yield session
 
     async def override_get_current_user():
         return FakeUser(current_user_permissions)
