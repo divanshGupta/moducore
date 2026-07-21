@@ -1,21 +1,5 @@
 import uuid
 
-import pytest_asyncio
-
-from tests.factories import CategoryFactory, SupplierFactory
-
-
-@pytest_asyncio.fixture
-async def category_and_supplier(db_session):
-    category = CategoryFactory.build()
-    supplier = SupplierFactory.build()
-
-    db_session.add(category)
-    db_session.add(supplier)
-    await db_session.commit()
-
-    return category, supplier
-
 
 async def test_create_medicine(client, category_and_supplier):
     category, supplier = category_and_supplier
@@ -68,6 +52,7 @@ async def test_create_medicine_name_too_long(client, category_and_supplier):
 
 
 async def test_create_medicine_invalid_category(client, category_and_supplier):
+    # _ is the idiomatic way to say "I am recieving this value because i have to unpack the tuple, but i am deliberately not using it."
     _, supplier = category_and_supplier
 
     response = await client.post("/medicines", json={

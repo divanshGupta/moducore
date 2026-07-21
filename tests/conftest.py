@@ -18,6 +18,8 @@ from src.core.app import create_app
 from src.modules.user.dependencies import get_current_user
 from tests.fake_auth import FakeUser, ALL_PERMISSION_NAMES
 
+from tests.factories import CategoryFactory, SupplierFactory
+
 
 # fixture that returns ALL_PERMISSION_NAMES (Admin)
 @pytest_asyncio.fixture
@@ -95,3 +97,15 @@ async def client(db_engine, db_session, current_user_permissions):
         yield ac
 
     test_app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def category_and_supplier(db_session):
+    category = CategoryFactory.build()
+    supplier = SupplierFactory.build()
+
+    db_session.add(category)
+    db_session.add(supplier)
+    await db_session.commit()
+
+    return category, supplier
