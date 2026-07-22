@@ -84,7 +84,15 @@ async def client(db_engine, db_session, current_user_permissions):
 
     async def override_get_db():
         async with session_factory() as session:
-            yield session
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
+            # i am not using finally block here. session_factory already used
+            # inside an async with block, which handles closing the session on its own
+            # adding an explicit finally block while we are using async with, would be redundent.
 
     async def override_get_current_user():
         return FakeUser(current_user_permissions)

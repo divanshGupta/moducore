@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from uuid import UUID
@@ -28,6 +29,7 @@ def _create_token(subject: UUID, token_type: TokenType, expires_delta: timedelta
         "type": token_type.value,
         "iat": now,
         "exp": now + expires_delta,
+        "jti": str(uuid.uuid4()),
     }
     return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
